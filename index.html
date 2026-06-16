@@ -278,9 +278,49 @@ table tfoot td { font-weight: 700; border-top: 2px solid var(--text); }
 }
 .toast.show { opacity: 1; transform: translateY(0); }
 .toast.error { background: var(--danger); }
+
+/* Verification Overlay */
+.verify-overlay {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  background: linear-gradient(135deg, #7c2d12 0%, #9a3412 100%);
+  z-index: 99999; display: flex; align-items: center; justify-content: center;
+}
+.verify-card {
+  background: white; border-radius: 14px; padding: 40px 36px;
+  text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  max-width: 420px; width: 90%;
+}
+.verify-card .logo { font-size: 2.8rem; margin-bottom: 12px; }
+.verify-card h2 { font-size: 1.3rem; margin-bottom: 6px; color: #7c2d12; }
+.verify-card .sub { font-size: 0.85rem; color: #777; margin-bottom: 22px; }
+.verify-card input {
+  width: 100%; padding: 13px 16px; border: 2px solid #ddd; border-radius: 8px;
+  font-size: 1.1rem; text-align: center; letter-spacing: 6px;
+  transition: 0.2s; font-family: monospace;
+}
+.verify-card input:focus { outline: none; border-color: #c2410c; box-shadow: 0 0 0 3px rgba(194,65,12,0.12); }
+.verify-card .verify-btn {
+  width: 100%; margin-top: 16px; padding: 13px; background: #c2410c; color: white;
+  border: none; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer;
+  transition: 0.2s;
+}
+.verify-card .verify-btn:hover { background: #9a3412; }
+.verify-card .error { color: #d93025; font-size: 0.85rem; margin-top: 10px; min-height: 20px; }
 </style>
 </head>
 <body>
+
+<!-- Verification Overlay -->
+<div class="verify-overlay" id="verifyOverlay">
+  <div class="verify-card">
+    <div class="logo">🏭</div>
+    <h2>铭正咨询工伤赔偿计算器</h2>
+    <p class="sub">请输入验证码以继续使用</p>
+    <input type="password" id="verifyInput" placeholder="请输入验证码" maxlength="20" autocomplete="off">
+    <button class="verify-btn" onclick="checkVerification()">🔓 验证进入</button>
+    <p class="error" id="verifyError"></p>
+  </div>
+</div>
 
 <header class="app-header">
   <h1>🏭 铭正咨询工伤赔偿计算器</h1>
@@ -555,6 +595,44 @@ table tfoot td { font-weight: 700; border-top: 2px solid var(--text); }
 <div class="toast" id="toast"></div>
 
 <script>
+// ============================================================
+// VERIFICATION — 验证码保护
+// ============================================================
+const VERIFY_HASH = '099d839f31337e937eee08cef46711db5012a6c06740701985019df23ed9ef65';
+
+async function checkVerification() {
+  const input = document.getElementById('verifyInput').value.trim();
+  const errorEl = document.getElementById('verifyError');
+  if (!input) { errorEl.textContent = '请输入验证码'; return; }
+
+  const encoder = new TextEncoder();
+  const hashBuffer = await crypto.subtle.digest('SHA-256', encoder.encode(input));
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+
+  if (hashHex === VERIFY_HASH) {
+    sessionStorage.setItem('_mz_verified', '1');
+    document.getElementById('verifyOverlay').remove();
+  } else {
+    errorEl.textContent = '❌ 验证码错误，请重试';
+    document.getElementById('verifyInput').value = '';
+  }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  const input = document.getElementById('verifyInput');
+  if (input) {
+    input.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') checkVerification();
+    });
+    if (sessionStorage.getItem('_mz_verified') === '1') {
+      document.getElementById('verifyOverlay').remove();
+    } else {
+      input.focus();
+    }
+  }
+});
+
 // ============================================================
 // PROVINCE DATA — 2025年度各省数据
 // avgSalary: 城镇非私营单位在岗职工年平均工资（元/年）
