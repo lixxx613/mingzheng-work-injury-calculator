@@ -248,8 +248,10 @@ table tfoot td { font-weight: 700; border-top: 2px solid var(--text); }
 @media print {
   body { background: white; }
   .app-header { position: static; }
+  .verify-overlay { display: none !important; }
   .card { box-shadow: none; border: 1px solid #ddd; break-inside: avoid; }
-  .btn, .btn-group, #input-section { display: none; }
+  .btn, .btn-group, #input-section, .preset-bar, .save-indicator, .btn-quickref, .modal-overlay { display: none !important; }
+  @page { margin: 1.5cm; }
 }
 @media (max-width: 768px) {
   .container { padding: 12px 10px; }
@@ -259,7 +261,89 @@ table tfoot td { font-weight: 700; border-top: 2px solid var(--text); }
   .dependent-row { grid-template-columns: 1fr 1fr; }
   .btn-group { flex-direction: column; }
   .btn { justify-content: center; }
+  /* Mobile collapsible cards */
+  .card-header { cursor: pointer; user-select: none; }
+  .card-header::after {
+    content: '\25BC';
+    margin-left: auto;
+    font-size: 0.75rem;
+    transition: transform 0.25s ease;
+    color: var(--text-secondary);
+  }
+  .card-header.collapsed::after { transform: rotate(-90deg); }
+  .card-body { display: block; }
+  .card-body.collapsed { display: none; }
 }
+@media (min-width: 769px) {
+  .card-body { display: block !important; }
+  .card-header { cursor: default; }
+  .card-header::after { display: none; }
+}
+
+/* Preset Bar */
+.preset-bar {
+  display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+  padding: 12px 16px; margin-bottom: 16px;
+  background: #fff7ed; border: 1px solid #fed7aa;
+  border-radius: var(--radius); font-size: 0.85rem;
+}
+.preset-bar .preset-label {
+  font-weight: 600; color: #9a3412; margin-right: 4px; white-space: nowrap;
+}
+.preset-bar .preset-btn {
+  padding: 6px 14px; border: 1px solid #fdba74; border-radius: 20px;
+  background: white; color: #9a3412; cursor: pointer; font-size: 0.82rem;
+  font-family: inherit; transition: var(--transition); white-space: nowrap;
+}
+.preset-bar .preset-btn:hover { background: #fed7aa; border-color: #f97316; }
+.preset-bar .preset-btn.clear-btn { background: #fef2f2; border-color: #fca5a5; color: #b91c1c; }
+.preset-bar .preset-btn.clear-btn:hover { background: #fee2e2; border-color: #ef4444; }
+
+/* Save Indicator */
+.save-indicator {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 0.8rem; color: #15803d; opacity: 0;
+  transition: opacity 0.3s ease; padding: 6px 12px;
+  background: #f0fdf4; border-radius: 6px; border: 1px solid #bbf7d0;
+}
+.save-indicator.show { opacity: 1; }
+
+/* Quick Reference Modal */
+.modal-overlay {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(0,0,0,0.55); z-index: 99998;
+  display: flex; align-items: center; justify-content: center;
+}
+.modal-overlay.hidden { display: none; }
+.modal-card {
+  background: white; border-radius: 12px; padding: 28px 24px;
+  max-width: 720px; width: 94%; max-height: 85vh; overflow-y: auto;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.25); position: relative;
+}
+.modal-card .modal-close {
+  position: absolute; top: 10px; right: 16px;
+  background: none; border: none; font-size: 1.4rem;
+  cursor: pointer; color: var(--text-secondary);
+  line-height: 1; padding: 4px 8px;
+}
+.modal-card .modal-close:hover { color: var(--text); }
+.modal-card h3 { font-size: 1.1rem; color: #7c2d12; margin-bottom: 10px; margin-top: 18px; }
+.modal-card h3:first-child { margin-top: 0; }
+.modal-card table { font-size: 0.82rem; margin-bottom: 16px; }
+.modal-card table th { font-size: 0.8rem; padding: 6px 8px; }
+.modal-card table td { padding: 6px 8px; }
+.modal-card .ref-note { font-size: 0.82rem; color: var(--text-secondary); margin-top: 8px; line-height: 1.6; }
+
+/* Card body for collapsible panels */
+.card-body { transition: all 0.25s ease; }
+
+.btn-quickref {
+  background: #fef3c7; color: #92400e; border: 1px solid #fde68a;
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 10px 22px; border-radius: 6px; font-size: 0.95rem;
+  font-weight: 500; cursor: pointer; transition: var(--transition); font-family: inherit;
+}
+.btn-quickref:hover { background: #fde68a; }
 
 .toast {
   position: fixed;
@@ -309,6 +393,7 @@ table tfoot td { font-weight: 700; border-top: 2px solid var(--text); }
 </style>
 </head>
 <body>
+<!-- Ref: MZ-WorkInjury-2026 -->
 
 <!-- Verification Overlay -->
 <div class="verify-overlay" id="verifyOverlay">
@@ -332,12 +417,22 @@ table tfoot td { font-weight: 700; border-top: 2px solid var(--text); }
 <!-- ====== INPUT SECTION ====== -->
 <div id="input-section">
 
+  <!-- Preset Bar -->
+  <div class="preset-bar">
+    <span class="preset-label">📋 场景预设：</span>
+    <button class="preset-btn" onclick="applyPreset('linyi10')">临沂·十级伤残·解除劳动关系</button>
+    <button class="preset-btn" onclick="applyPreset('linyiDeath')">临沂·工亡·有配偶子女</button>
+    <button class="preset-btn" onclick="applyPreset('linyiGeneral')">临沂·一般工伤</button>
+    <button class="preset-btn clear-btn" onclick="clearPreset()">清空预设</button>
+  </div>
+
   <!-- Card 1: 基本信息 -->
   <div class="card">
     <div class="card-header">
       <div class="icon icon-orange">👤</div>
       <h2>基本信息</h2>
     </div>
+    <div class="card-body">
     <div class="form-grid">
       <div class="form-group">
         <label>受伤职工姓名</label>
@@ -384,6 +479,7 @@ table tfoot td { font-weight: 700; border-top: 2px solid var(--text); }
         <textarea id="injuryDesc" rows="2" placeholder="简要描述事故经过（如：工作时间在车间操作机器时右手被压伤）"></textarea>
       </div>
     </div>
+    </div>
   </div>
 
   <!-- Card 2: 工伤认定信息 -->
@@ -392,6 +488,7 @@ table tfoot td { font-weight: 700; border-top: 2px solid var(--text); }
       <div class="icon icon-red">🏥</div>
       <h2>工伤认定信息</h2>
     </div>
+    <div class="card-body">
     <div class="info-box">
       <strong>📋 说明：</strong>根据《工伤保险条例》第十七条，职工发生事故伤害，所在单位应当在30日内向统筹地区社会保险行政部门提出工伤认定申请。劳动能力鉴定由用人单位、工伤职工或其近亲属向设区的市级劳动能力鉴定委员会提出申请。
     </div>
@@ -452,6 +549,7 @@ table tfoot td { font-weight: 700; border-top: 2px solid var(--text); }
         <span class="hint">用于计算停工留薪期护理费及鉴定后生活护理费</span>
       </div>
     </div>
+    </div>
   </div>
 
   <!-- Card 3: 工资及待遇标准 -->
@@ -460,6 +558,7 @@ table tfoot td { font-weight: 700; border-top: 2px solid var(--text); }
       <div class="icon icon-amber">💵</div>
       <h2>工资及待遇标准</h2>
     </div>
+    <div class="card-body">
     <div class="info-box">
       <strong>📌 本人工资</strong> — 指工伤职工因工作遭受事故伤害前12个月平均月缴费工资。本人工资低于统筹地区职工平均工资60%的按60%计算，高于300%的按300%计算。<br>
       <strong>📌 全国城镇居民人均可支配收入</strong> — 用于计算一次性工亡补助金（20倍）。
@@ -486,6 +585,7 @@ table tfoot td { font-weight: 700; border-top: 2px solid var(--text); }
         <span class="hint">由各统筹地区规定，通常为30-100元/天</span>
       </div>
     </div>
+    </div>
   </div>
 
   <!-- Card 4: 费用明细 -->
@@ -494,6 +594,7 @@ table tfoot td { font-weight: 700; border-top: 2px solid var(--text); }
       <div class="icon icon-green">💰</div>
       <h2>各项费用明细</h2>
     </div>
+    <div class="card-body">
     <div class="form-grid">
       <div class="form-group">
         <label>医疗费 (元)</label>
@@ -525,6 +626,7 @@ table tfoot td { font-weight: 700; border-top: 2px solid var(--text); }
         <span class="hint">如后续治疗依赖的床位费等</span>
       </div>
     </div>
+    </div>
   </div>
 
   <!-- Card 5: 供养亲属（仅工亡） -->
@@ -533,18 +635,23 @@ table tfoot td { font-weight: 700; border-top: 2px solid var(--text); }
       <div class="icon icon-blue">👨‍👩‍👧</div>
       <h2>供养亲属信息（工亡适用）</h2>
     </div>
+    <div class="card-body">
     <div id="dependentsContainer">
       <p style="color:var(--text-secondary);font-size:0.9rem;margin-bottom:12px;">
         因工死亡职工生前提供主要生活来源、无劳动能力的亲属。包括：配偶、子女、父母、祖父母、外祖父母、孙子女、外孙子女、兄弟姐妹。
       </p>
     </div>
     <button class="btn btn-outline btn-sm" onclick="addDependent()" style="margin-top:8px;">+ 添加供养亲属</button>
+    </div>
   </div>
 
   <!-- Action Buttons -->
   <div class="btn-group" style="justify-content:center;margin-top:10px;">
     <button class="btn btn-primary btn-lg" onclick="calculate()">🧮 开始计算</button>
     <button class="btn btn-outline btn-lg" onclick="resetForm()">🔄 重置表单</button>
+    <button class="btn-quickref" onclick="showQuickRef()">📖 赔偿标准速查</button>
+    <button class="btn btn-outline btn-sm" onclick="clearStorageData()" title="清除暂存数据" style="font-size:0.85rem;">🗑️ 清除暂存数据</button>
+    <span class="save-indicator" id="saveIndicator">💾 已自动保存</span>
   </div>
 
 </div>
@@ -586,6 +693,71 @@ table tfoot td { font-weight: 700; border-top: 2px solid var(--text); }
     <div class="btn-group" style="justify-content:center;margin-top:8px;">
       <button class="btn btn-outline" onclick="scrollToInput()">✏️ 返回修改</button>
     </div>
+  </div>
+</div>
+
+<!-- Quick Reference Modal -->
+<div class="modal-overlay hidden" id="quickRefModal">
+  <div class="modal-card">
+    <button class="modal-close" onclick="closeQuickRef()">✕</button>
+    <h3>📊 表一：伤残等级速查</h3>
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr><th>伤残等级</th><th>一次性伤残补助金（月数）</th><th>伤残津贴比例</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>一级</td><td>27个月</td><td>90%（本人工资）</td></tr>
+          <tr><td>二级</td><td>25个月</td><td>85%（本人工资）</td></tr>
+          <tr><td>三级</td><td>23个月</td><td>80%（本人工资）</td></tr>
+          <tr><td>四级</td><td>21个月</td><td>75%（本人工资）</td></tr>
+          <tr><td>五级</td><td>18个月</td><td>70%（难以安排工作时）</td></tr>
+          <tr><td>六级</td><td>16个月</td><td>60%（难以安排工作时）</td></tr>
+          <tr><td>七级</td><td>13个月</td><td>—</td></tr>
+          <tr><td>八级</td><td>11个月</td><td>—</td></tr>
+          <tr><td>九级</td><td>9个月</td><td>—</td></tr>
+          <tr><td>十级</td><td>7个月</td><td>—</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="ref-note">依据：《工伤保险条例》第35-37条。七至十级不享受伤残津贴。</p>
+
+    <h3>📊 表二：各省2025年度在岗职工月平均工资（top 10）</h3>
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr><th>省份</th><th>月平均工资（元）</th><th>年平均工资（元）</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>上海</td><td>19,821</td><td>237,856</td></tr>
+          <tr><td>北京</td><td>18,998</td><td>227,974</td></tr>
+          <tr><td>西藏</td><td>12,943</td><td>155,318</td></tr>
+          <tr><td>浙江</td><td>12,240</td><td>146,883</td></tr>
+          <tr><td>天津</td><td>11,974</td><td>143,689</td></tr>
+          <tr><td>江苏</td><td>11,607</td><td>139,288</td></tr>
+          <tr><td>广东</td><td>11,435</td><td>137,218</td></tr>
+          <tr><td>海南</td><td>10,071</td><td>120,853</td></tr>
+          <tr><td>云南</td><td>9,946</td><td>119,353</td></tr>
+          <tr><td>青海</td><td>9,599</td><td>115,184</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="ref-note">数据来源：各省2025年度统计公报。选择省份后自动填充，可手动修改。完整31省数据请见计算器内置数据。</p>
+
+    <h3>📊 表三：年龄递减规则说明</h3>
+    <p class="ref-note" style="margin-bottom:6px;">
+      <strong>一次性伤残就业补助金递减规则：</strong><br>
+      · 男性：≥55岁起，每增加1岁递减20%，直至100%减免<br>
+      · 女性：≥50岁起，每增加1岁递减20%，直至100%减免
+    </p>
+    <p class="ref-note" style="margin-bottom:6px;">
+      <strong>两金全免（超法定退休年龄）：</strong><br>
+      · 男性年龄 &gt;60岁 或 离职时年龄 &gt;60岁 → 医疗补助金+就业补助金均不享受<br>
+      · 女性年龄 &gt;55岁 或 离职时年龄 &gt;55岁 → 医疗补助金+就业补助金均不享受
+    </p>
+    <p class="ref-note">
+      <strong>法律依据：</strong>《工伤保险条例》及各省实施办法关于距法定退休年龄不足的递减规定。各省具体月数标准详见内置 PROVINCE_DATA 数据。
+    </p>
   </div>
 </div>
 
@@ -723,6 +895,38 @@ function init() {
   document.getElementById('injuryType').addEventListener('change', toggleInjuryFields);
   document.getElementById('province').addEventListener('change', onProvinceChange);
   toggleInjuryFields();
+
+  // Restore saved form data if available
+  restoreFormFromStorage();
+
+  // Attach auto-save listeners to all form inputs inside input-section
+  var inputSection = document.getElementById('input-section');
+  if (inputSection) {
+    inputSection.querySelectorAll('input, select, textarea').forEach(function(el) {
+      el.addEventListener('change', saveFormToStorage);
+      el.addEventListener('input', saveFormToStorage);
+    });
+  }
+
+  // Attach click handlers to card-headers for mobile collapse
+  var cardHeaders = document.querySelectorAll('#input-section .card-header');
+  cardHeaders.forEach(function(header) {
+    header.addEventListener('click', function() { toggleCardBody(header); });
+  });
+
+  // On mobile, collapse all cards except the first
+  if (window.innerWidth <= 768) {
+    var allCardBodies = document.querySelectorAll('#input-section .card-body');
+    allCardBodies.forEach(function(body, idx) {
+      if (idx === 0) {
+        body.classList.remove('collapsed');
+        body.previousElementSibling.classList.remove('collapsed');
+      } else {
+        body.classList.add('collapsed');
+        body.previousElementSibling.classList.add('collapsed');
+      }
+    });
+  }
 }
 
 function toggleInjuryFields() {
@@ -1406,6 +1610,8 @@ function exportWord() {
         new Paragraph({ text: '4. 如用人单位未依法参加工伤保险，全部工伤待遇由用人单位承担。' }),
         new Paragraph({ text: '5. 本计算书仅供参考，不构成法律意见。实际赔偿金额以劳动仲裁裁决或法院判决为准。', spacing: { after: 400 } }),
         new Paragraph({ text: '计算人（签名）：_______________    日期：_______________', spacing: { after: 200 } }),
+        new Paragraph({ text: '铭正咨询 — 联系电话：_______________    地址：_______________', spacing: { after: 100 } }),
+        new Paragraph({ text: 'Ref: MZ-WorkInjury-2026', spacing: { after: 100 } }),
       ]
     }]
   });
@@ -1494,8 +1700,9 @@ function resetForm() {
   dependentCounter = 0;
   toggleInjuryFields();
   window._calcResult = null;
+  localStorage.removeItem('_mz_workinjury_form');
   window.scrollTo({ top: 0, behavior: 'smooth' });
-  showToast('🔄 表单已重置', false);
+  showToast('🔄 表单已重置  🗑️ 已清除暂存数据', false);
 }
 
 function showToast(msg, isError) {
@@ -1504,7 +1711,263 @@ function showToast(msg, isError) {
   toast.classList.add('show');
   if (isError) toast.classList.add('error');
   else toast.classList.remove('error');
-  setTimeout(() => { toast.classList.remove('show'); }, 2500);
+  setTimeout(function() { toast.classList.remove('show'); }, 2500);
+}
+
+// ============================================================
+// LOCALSTORAGE AUTO-SAVE (优化1)
+// ============================================================
+function saveFormToStorage() {
+  var data = {};
+  var inputSection = document.getElementById('input-section');
+  if (!inputSection) return;
+  inputSection.querySelectorAll('input, select, textarea').forEach(function(el) {
+    if (el.id) {
+      if (el.type === 'radio') {
+        if (el.checked) data[el.id] = el.value;
+      } else if (el.type === 'checkbox') {
+        data[el.id] = el.checked;
+      } else {
+        data[el.id] = el.value;
+      }
+    }
+  });
+  // Also save dependent rows
+  var depData = [];
+  var depRows = document.querySelectorAll('#dependentsContainer .dependent-row');
+  depRows.forEach(function(row) {
+    var rowData = {};
+    row.querySelectorAll('input, select').forEach(function(el) {
+      if (el.id) rowData[el.id] = el.value;
+    });
+    depData.push(rowData);
+  });
+  data['_dependents'] = depData;
+  data['_dependentCounter'] = dependentCounter;
+
+  localStorage.setItem('_mz_workinjury_form', JSON.stringify(data));
+
+  // Show save indicator briefly
+  var indicator = document.getElementById('saveIndicator');
+  if (indicator) {
+    indicator.classList.add('show');
+    clearTimeout(indicator._timeout);
+    indicator._timeout = setTimeout(function() {
+      indicator.classList.remove('show');
+    }, 1500);
+  }
+}
+
+function restoreFormFromStorage() {
+  var raw = localStorage.getItem('_mz_workinjury_form');
+  if (!raw) return;
+  var data;
+  try { data = JSON.parse(raw); } catch(e) { return; }
+  if (!data) return;
+
+  // Restore dependent counter first
+  if (data['_dependentCounter'] !== undefined) {
+    dependentCounter = data['_dependentCounter'];
+  }
+
+  // Restore dependent rows
+  var depContainer = document.getElementById('dependentsContainer');
+  if (depContainer && data['_dependents'] && data['_dependents'].length > 0) {
+    // Clear existing dependent rows
+    depContainer.querySelectorAll('.dependent-row').forEach(function(el) { el.remove(); });
+    // Reset counter so new rows start fresh, we'll set it back after
+    var savedCounter = dependentCounter;
+    dependentCounter = 0;
+    data['_dependents'].forEach(function(rowData) {
+      addDependent(); // creates new row with fresh ID
+      var rows = depContainer.querySelectorAll('.dependent-row');
+      var lastRow = rows[rows.length - 1];
+      if (lastRow) {
+        // Match by field order: relation select, age input, count input, extra select
+        var selects = lastRow.querySelectorAll('select');
+        var inputs = lastRow.querySelectorAll('input');
+        // Find the value from rowData: keys follow pattern dep-relation-N, dep-age-N, etc.
+        var rowKeys = Object.keys(rowData);
+        rowKeys.forEach(function(key) {
+          if (key.indexOf('dep-relation-') === 0 && selects[0]) selects[0].value = rowData[key];
+          if (key.indexOf('dep-age-') === 0 && inputs[0]) inputs[0].value = rowData[key];
+          if (key.indexOf('dep-count-') === 0 && inputs[1]) inputs[1].value = rowData[key];
+          if (key.indexOf('dep-extra-') === 0 && selects[1]) selects[1].value = rowData[key];
+        });
+      }
+    });
+    dependentCounter = savedCounter;
+  }
+
+  // Restore form fields
+  Object.keys(data).forEach(function(key) {
+    if (key === '_dependents' || key === '_dependentCounter') return;
+    var el = document.getElementById(key);
+    if (el) {
+      if (el.type === 'radio') {
+        if (el.value === data[key]) el.checked = true;
+      } else if (el.type === 'checkbox') {
+        el.checked = data[key];
+      } else {
+        el.value = data[key];
+      }
+    }
+  });
+
+  // Re-trigger injury type toggle based on restored value
+  toggleInjuryFields();
+}
+
+function clearStorageData() {
+  localStorage.removeItem('_mz_workinjury_form');
+  var indicator = document.getElementById('saveIndicator');
+  if (indicator) indicator.classList.remove('show');
+  showToast('🗑️ 已清除暂存数据', false);
+}
+
+// ============================================================
+// PRESET SCENARIOS (优化3)
+// ============================================================
+function applyPreset(type) {
+  if (type === 'linyi10') {
+    // 临沂·十级伤残·解除劳动关系
+    document.getElementById('province').value = '山东（临沂）';
+    document.getElementById('injuryType').value = 'disability';
+    document.getElementById('disabilityLevel').value = '10';
+    document.getElementById('employmentStatus').value = 'terminate';
+    document.getElementById('workStoppageMonths').value = '3';
+    document.getElementById('hospitalDays').value = '30';
+    document.getElementById('selfCareLevel').value = 'none';
+    document.getElementById('victimAge').value = '38';
+    document.getElementById('victimGender').value = 'male';
+    document.getElementById('hasWorkInjuryInsurance').value = 'yes';
+    document.getElementById('monthlySalary').value = '5600';
+    document.getElementById('mealAllowanceRate').value = '30';
+    document.getElementById('medicalExpense').value = '25000';
+    onProvinceChange();
+    toggleInjuryFields();
+    saveFormToStorage();
+    showToast('✅ 已应用"临沂·十级伤残·解除劳动关系"预设', false);
+  } else if (type === 'linyiDeath') {
+    // 临沂·工亡·有配偶子女
+    document.getElementById('province').value = '山东（临沂）';
+    document.getElementById('injuryType').value = 'death';
+    document.getElementById('victimAge').value = '42';
+    document.getElementById('victimGender').value = 'male';
+    document.getElementById('hasWorkInjuryInsurance').value = 'yes';
+    document.getElementById('monthlySalary').value = '6800';
+    document.getElementById('workStoppageMonths').value = '0';
+    document.getElementById('hospitalDays').value = '5';
+    document.getElementById('mealAllowanceRate').value = '30';
+    document.getElementById('medicalExpense').value = '15000';
+    document.getElementById('rehabExpense').value = '0';
+    document.getElementById('travelExpense').value = '0';
+    // Clear and add dependents
+    document.getElementById('dependentsContainer').querySelectorAll('.dependent-row').forEach(function(el) { el.remove(); });
+    dependentCounter = 0;
+    addDependent(); // spouse
+    setTimeout(function() {
+      var d1 = document.getElementById('dependent-row-1');
+      if (d1) {
+        var rel = d1.querySelector('select');
+        if (rel) rel.value = 'spouse';
+        var age = d1.querySelectorAll('input')[0];
+        if (age) age.value = '40';
+      }
+      addDependent(); // child
+      var d2 = document.getElementById('dependent-row-2');
+      if (d2) {
+        var rel2 = d2.querySelector('select');
+        if (rel2) rel2.value = 'child';
+        var age2 = d2.querySelectorAll('input')[0];
+        if (age2) age2.value = '10';
+      }
+      saveFormToStorage();
+    }, 50);
+    onProvinceChange();
+    toggleInjuryFields();
+    showToast('✅ 已应用"临沂·工亡·有配偶子女"预设', false);
+    return;
+  } else if (type === 'linyiGeneral') {
+    // 临沂·一般工伤
+    document.getElementById('province').value = '山东（临沂）';
+    document.getElementById('injuryType').value = 'injury';
+    document.getElementById('workStoppageMonths').value = '2';
+    document.getElementById('hospitalDays').value = '15';
+    document.getElementById('selfCareLevel').value = 'none';
+    document.getElementById('victimAge').value = '30';
+    document.getElementById('victimGender').value = 'male';
+    document.getElementById('hasWorkInjuryInsurance').value = 'yes';
+    document.getElementById('monthlySalary').value = '5000';
+    document.getElementById('mealAllowanceRate').value = '30';
+    document.getElementById('medicalExpense').value = '8000';
+    onProvinceChange();
+    toggleInjuryFields();
+    saveFormToStorage();
+    showToast('✅ 已应用"临沂·一般工伤"预设', false);
+  }
+}
+
+function clearPreset() {
+  // Clear preset-related fields but not fee amounts
+  document.getElementById('victimName').value = '';
+  document.getElementById('victimAge').value = '';
+  document.getElementById('province').value = '';
+  document.getElementById('employerName').value = '';
+  document.getElementById('certNumber').value = '';
+  document.getElementById('injuryDesc').value = '';
+  document.getElementById('injuryType').value = 'injury';
+  document.getElementById('disabilityLevel').value = '10';
+  document.getElementById('employmentStatus').value = 'keep';
+  document.getElementById('selfCareLevel').value = 'none';
+  document.getElementById('separationDate').value = '';
+  document.getElementById('hasWorkInjuryInsurance').value = 'yes';
+  document.getElementById('workStoppageMonths').value = '0';
+  document.getElementById('hospitalDays').value = '0';
+  document.getElementById('localAvgSalary').value = '0';
+  document.getElementById('monthlySalary').value = '0';
+  document.getElementById('dependentsContainer').querySelectorAll('.dependent-row').forEach(function(el) { el.remove(); });
+  dependentCounter = 0;
+  toggleInjuryFields();
+  saveFormToStorage();
+  showToast('📋 已清空预设字段（费用金额未清除）', false);
+}
+
+// ============================================================
+// QUICK REFERENCE MODAL (优化4)
+// ============================================================
+function showQuickRef() {
+  var modal = document.getElementById('quickRefModal');
+  if (modal) modal.classList.remove('hidden');
+}
+function closeQuickRef() {
+  var modal = document.getElementById('quickRefModal');
+  if (modal) modal.classList.add('hidden');
+}
+// Overlay click to close
+document.addEventListener('click', function(e) {
+  if (e.target.id === 'quickRefModal') closeQuickRef();
+});
+// Escape key to close
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') closeQuickRef();
+});
+
+// ============================================================
+// MOBILE COLLAPSIBLE PANELS (优化5)
+// ============================================================
+function toggleCardBody(headerEl) {
+  if (window.innerWidth > 768) return; // only on mobile
+  var cardBody = headerEl.nextElementSibling;
+  if (!cardBody || !cardBody.classList.contains('card-body')) return;
+  var isCollapsed = cardBody.classList.contains('collapsed');
+  if (isCollapsed) {
+    cardBody.classList.remove('collapsed');
+    headerEl.classList.remove('collapsed');
+  } else {
+    cardBody.classList.add('collapsed');
+    headerEl.classList.add('collapsed');
+  }
 }
 
 // ============================================================
